@@ -1,3 +1,35 @@
+import os
+from datetime import date, datetime
+import streamlit as st
+import pandas as pd
+from sqlalchemy import create_engine, String, Integer, Boolean, Date, DateTime, ForeignKey, Text, Float, select, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, relationship
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, InvalidHashError
+
+APP_NAME = "GPGC Miran Shah College Management System"
+ROLES = ["super_admin", "second_admin", "teacher", "student", "parent", "librarian", "employee", "hod", "hostel_warden"]
+ROLE_LABELS = {
+    "super_admin": "Super Admin", "second_admin": "Second Admin", "teacher": "Teacher",
+    "student": "Student", "parent": "Parent", "librarian": "Librarian",
+    "employee": "Employee", "hod": "Head of Department", "hostel_warden": "Hostel Warden"
+}
+ph = PasswordHasher()
+
+st.set_page_config(page_title=APP_NAME, page_icon="🎓", layout="wide", initial_sidebar_state="expanded")
+st.markdown("""<style>
+:root { color-scheme: light; }
+.block-container {padding-top: 1.4rem; padding-bottom: 3rem; max-width: 1400px;}
+.hero {padding:1.25rem 1.5rem; border-radius:16px; background:linear-gradient(120deg,#12345a,#167d91); color:white; margin-bottom:1rem;}
+.hero h1 {color:white; margin:0;} .hero p {margin:.35rem 0 0 0; opacity:.9;}
+div[data-testid="stMetric"] {border:1px solid #dce3ea; padding:14px; border-radius:12px; background:#fff;}
+.small-muted {color:#637381; font-size:.9rem;}
+header[data-testid="stHeader"] {background:transparent;}
+[data-testid="stSidebar"] {border-right:1px solid rgba(128,128,128,.25);}
+button[kind="secondary"] {border-radius:10px;}
+</style>""", unsafe_allow_html=True)
+
+class Base(DeclarativeBase): pass
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -62,98 +94,3 @@ class Book(Base):
     author: Mapped[str] = mapped_column(String(160), default="")
     category: Mapped[str] = mapped_column(String(100), default="")
     total_copies: Mapped[int] = mapped_column(Integer, default=1)
-    available_copies: Mapped[int] = mapped_column(Integer, default=1)
-
-class HostelRoom(Base):
-    __tablename__ = "hostel_rooms"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    hostel_name: Mapped[str] = mapped_column(String(120))
-    room_no: Mapped[str] = mapped_column(String(40))
-    capacity: Mapped[int] = mapped_column(Integer, default=1)
-    occupied: Mapped[int] = mapped_column(Integer, default=0)
-    status: Mapped[str] = mapped_column(String(30), default="Available")
-
-class FeeRecord(Base):
-    __tablename__ = "fee_records"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), index=True)
-    description: Mapped[str] = mapped_column(String(160))
-    amount: Mapped[float] = mapped_column(Float, default=0)
-    paid_amount: Mapped[float] = mapped_column(Float, default=0)
-    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    status: Mapped[str] = mapped_column(String(30), default="Unpaid")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-class AuditLog(Base):
-    __tablename__ = "audit_logs"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    action: Mapped[str] = mapped_column(String(120))
-    details: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-
-def get_setting(key, default=None):
-    try:
-        return st.secrets.get(key, os.getenv(key, default))
-    except Exception:
-        return os.getenv(key, default)
-
-@st.cache_resource
-def database_resources():
-    url = get_setting("DATABASE_URL", "sqlite:///gpgc_cms.db")
-    # Most managed PostgreSQL providers provide postgres://; SQLAlchemy expects postgresql://.
-    if url.startswith("postgres://"):
-        url = "postgresql+psycopg://" + url[len("postgres://"):]
-    elif url.startswith("postgresql://") and "+psycopg" not in url:
-        url = "postgresql+psycopg://" + url[len("postgresql://"):]
-    kwargs = {"pool_pre_ping": True}
-    if url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-    engine = create_engine(url, **kwargs)
-    Base.metadata.create_all(engine)
-    return engine, sessionmaker(bind=engine, expire_on_commit=False)
-
-engine, SessionLocal = database_resources()
-
-def audit(db, user_id, action, details=""):
-    db.add(AuditLog(user_id=user_id, action=action, details=details[:4000]))
-
-def bootstrap_admin():
-    username = get_setting("BOOTSTRAP_ADMIN_USERNAME")
-    password = get_setting("BOOTSTRAP_ADMIN_PASSWORD")
-    if not username or not password:
-        return
-    with SessionLocal() as db:
-        existing = db.scalar(select(User).where(User.username == username.strip().lower()))
-        if not existing:
-            user = User(username=username.strip().lower(), full_name="System Super Administrator", email="", role="super_admin", department="Administration", password_hash=ph.hash(password), active=True)
-            db.add(user); db.flush(); audit(db, user.id, "bootstrap_admin_created", "Initial administrator created from deployment secrets")
-            db.commit()
-
-bootstrap_admin()
-
-def current_user():
-    uid = st.session_state.get("user_id")
-    if not uid: return None
-    with SessionLocal() as db:
-        user = db.get(User, uid)
-        if not user or not user.active:
-            st.session_state.clear(); return None
-        return {"id": user.id, "username": user.username, "full_name": user.full_name, "role": user.role, "department": user.department, "email": user.email}
-
-def login(username, password):
-    with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.username == username.strip().lower()))
-        if not user or not user.active:
-            return False
-        try:
-            valid = ph.verify(user.password_hash, password)
-        except (VerifyMismatchError, InvalidHashError):
-            valid = False
-        if not valid: return False
-        if ph.check_needs_rehash(user.password_hash): user.password_hash = ph.hash(password)
-        audit(db, user.id, "login", "Successful login")
-        db.commit()
-        st.session_state.user_id = user.id
-        return True
