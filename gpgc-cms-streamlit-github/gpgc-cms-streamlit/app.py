@@ -94,7 +94,3 @@ class Book(Base):
     author: Mapped[str] = mapped_column(String(160), default="")
     category: Mapped[str] = mapped_column(String(100), default="")
     total_copies: Mapped[int] = mapped_column(Integer, default=1)
-    import streamlit as st
-
-st.title("GPGC Miran Shah College Management System")
-st.success("The Streamlit application is rendering correctly.")
