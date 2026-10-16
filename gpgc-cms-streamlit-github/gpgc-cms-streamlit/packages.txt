@@ -1,0 +1,1 @@
+# No operating-system packages are required for the default SQLite setup.

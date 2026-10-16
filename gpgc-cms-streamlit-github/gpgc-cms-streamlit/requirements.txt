@@ -1,0 +1,6 @@
+streamlit>=1.41,<2.0
+SQLAlchemy>=2.0,<3.0
+psycopg[binary]>=3.2,<4.0
+argon2-cffi>=23.1,<26.0
+pandas>=2.2,<4.0
+groq>=0.18,<2.0
