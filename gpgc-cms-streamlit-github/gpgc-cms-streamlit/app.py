@@ -24,9 +24,6 @@ st.markdown("""<style>
 .hero h1 {color:white; margin:0;} .hero p {margin:.35rem 0 0 0; opacity:.9;}
 div[data-testid="stMetric"] {border:1px solid #dce3ea; padding:14px; border-radius:12px; background:#fff;}
 .small-muted {color:#637381; font-size:.9rem;}
-header[data-testid="stHeader"] {background:transparent;}
-[data-testid="stSidebar"] {border-right:1px solid rgba(128,128,128,.25);}
-button[kind="secondary"] {border-radius:10px;}
 </style>""", unsafe_allow_html=True)
 
 class Base(DeclarativeBase): pass
@@ -226,58 +223,16 @@ def login_screen():
             else:
                 st.error("Login failed. Check your username/password or contact the administrator.")
 
-def show_announcements(user, manage=False):
-    """Display announcements; authorized staff can edit or delete them."""
+def show_announcements(user):
     st.subheader("College announcements")
-    can_manage = manage and user["role"] in ("super_admin", "second_admin", "hod")
     with SessionLocal() as db:
-        stmt = select(Announcement).order_by(Announcement.created_at.desc()).limit(100)
-        if not can_manage:
-            stmt = select(Announcement).where(Announcement.published == True).order_by(Announcement.created_at.desc()).limit(30)
-        all_rows = db.scalars(stmt).all()
-        rows = [r for r in all_rows if r.audience.lower() in ("everyone", user["role"], ROLE_LABELS.get(user["role"], "").lower())]
-        records = [{"id": r.id, "title": r.title, "body": r.body, "audience": r.audience,
-                    "created_at": r.created_at, "published": r.published} for r in rows]
-    if not records:
-        st.info("No announcements have been published yet.")
-        return
-    for item in records:
-        with st.expander(f"{'📌 ' if item['published'] else '📝 Draft · '}{item['title']} · {item['created_at']:%d %b %Y}"):
-            st.write(item["body"])
-            st.caption(f"Audience: {item['audience']} · Status: {'Published' if item['published'] else 'Draft'}")
-            if can_manage:
-                with st.form(f"edit_announcement_{item['id']}"):
-                    new_title = st.text_input("Title", value=item["title"], key=f"ann_title_{item['id']}")
-                    new_body = st.text_area("Details", value=item["body"], height=110, key=f"ann_body_{item['id']}")
-                    audience_options = ["Everyone"] + ROLES
-                    current_audience = item["audience"] if item["audience"] in audience_options else "Everyone"
-                    new_audience = st.selectbox("Audience", audience_options,
-                        index=audience_options.index(current_audience),
-                        format_func=lambda r: "Everyone" if r == "Everyone" else ROLE_LABELS[r],
-                        key=f"ann_audience_{item['id']}")
-                    new_published = st.checkbox("Published", value=item["published"], key=f"ann_pub_{item['id']}")
-                    c1, c2 = st.columns(2)
-                    save = c1.form_submit_button("Save changes", type="primary", use_container_width=True)
-                    delete = c2.form_submit_button("Delete announcement", use_container_width=True)
-                if save:
-                    if not new_title.strip() or not new_body.strip():
-                        st.error("Title and details are required.")
-                    else:
-                        with SessionLocal() as db:
-                            row = db.get(Announcement, item["id"])
-                            if row:
-                                row.title = new_title.strip(); row.body = new_body.strip()
-                                row.audience = new_audience; row.published = new_published
-                                audit(db, user["id"], "announcement_updated", f"Announcement #{row.id}: {row.title}")
-                                db.commit()
-                        st.success("Announcement updated."); st.rerun()
-                if delete:
-                    with SessionLocal() as db:
-                        row = db.get(Announcement, item["id"])
-                        if row:
-                            audit(db, user["id"], "announcement_deleted", f"Announcement #{row.id}: {row.title}")
-                            db.delete(row); db.commit()
-                    st.success("Announcement deleted."); st.rerun()
+        rows = db.scalars(select(Announcement).where(Announcement.published == True).order_by(Announcement.created_at.desc()).limit(30)).all()
+        rows = [r for r in rows if r.audience.lower() in ("everyone", user["role"], ROLE_LABELS.get(user["role"], "").lower())]
+    if not rows: st.info("No announcements have been published yet.")
+    for item in rows:
+        with st.expander(f"{item.title} · {item.created_at:%d %b %Y}"):
+            st.write(item.body)
+            st.caption(f"Audience: {item.audience}")
 
 def admin_users(user):
     st.subheader("User and role management")
@@ -547,7 +502,7 @@ def ai_assistant(user):
 
 def dashboard(user):
     role = user["role"]
-    st.markdown(f'<div class="hero"><h1>🎓 {ROLE_LABELS.get(role, role)} Dashboard</h1><p>Government Post Graduate College Miran Shah · North Waziristan</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="hero"><h1>{ROLE_LABELS.get(role, role)} Dashboard</h1><p>Government Post Graduate College Miran Shah · North Waziristan</p></div>', unsafe_allow_html=True)
     with SessionLocal() as db:
         n_students = db.scalar(select(func.count()).select_from(Student)) or 0
         n_users = db.scalar(select(func.count()).select_from(User).where(User.active == True)) or 0
@@ -563,7 +518,14 @@ def dashboard(user):
     elif role == "hostel_warden": metric_row([("Hostel rooms", n_rooms), ("Students", n_students), ("Announcements", n_ann)])
     else: metric_row([("College courses", n_courses), ("Announcements", n_ann)])
     st.write(f"Welcome, **{user['full_name']}**. Your current role is **{ROLE_LABELS.get(role, role)}**.")
-
+    show_announcements(user)
+    st.divider()
+    st.subheader("Modules")
+    module_map = {
+        "Overview": "overview", "Students": "students", "Courses": "courses", "Attendance": "attendance",
+        "Fees": "fees", "Library": "library", "Hostel": "hostel", "Announcements": "announcements",
+        "User management": "users", "AI assistant (Groq)": "ai", "Audit log": "audit"
+    }
     allowed = {
         "super_admin": ["Overview","Students","Courses","Attendance","Fees","Library","Hostel","Announcements","User management","AI assistant (Groq)","Audit log"],
         "second_admin": ["Overview","Students","Courses","Attendance","Fees","Library","Hostel","Announcements","User management","AI assistant (Groq)"],
@@ -575,81 +537,37 @@ def dashboard(user):
         "hod": ["Overview","Students","Courses","Attendance","Announcements","AI assistant (Groq)"],
         "hostel_warden": ["Overview","Hostel","Announcements","AI assistant (Groq)"]
     }
-    available = allowed.get(role, ["Overview", "Announcements"])
-    # Streamlit-native horizontal navigation. Each category exposes a dropdown of allowed modules.
-    groups = {
-        "Home": ["Overview"],
-        "Academics": [x for x in ["Students", "Courses", "Attendance"] if x in available],
-        "Administration": [x for x in ["Fees", "User management", "Audit log"] if x in available],
-        "Services": [x for x in ["Library", "Hostel"] if x in available],
-        "Communication": [x for x in ["Announcements"] if x in available],
-        "AI Tools": [x for x in ["AI assistant (Groq)"] if x in available]
-    }
-    groups = {k:v for k,v in groups.items() if v}
-    st.markdown("""<style>
-    div[data-testid="stHorizontalBlock"] div[data-testid="stSelectbox"] label {font-weight:650;}
-    div[data-testid="stHorizontalBlock"] div[data-testid="stSelectbox"] > div {border-radius:10px;}
-    .nav-hint {font-size:.84rem;color:#7b8794;margin:.1rem 0 .65rem 0}
-    </style>""", unsafe_allow_html=True)
-    st.markdown('<div class="nav-hint">Use the top navigation menus to open the modules available for your role.</div>', unsafe_allow_html=True)
-    nav_cols = st.columns(len(groups))
-    selected_module = "Overview"
-    for col, (group_name, modules) in zip(nav_cols, groups.items()):
-        with col:
-            chosen = st.selectbox(group_name, modules, key=f"nav_{role}_{group_name}", label_visibility="visible")
-            if chosen != "Overview":
-                # Later menus take priority only if they contain the currently selected non-default module.
-                if st.session_state.get(f"active_module_{role}") == chosen or selected_module == "Overview":
-                    selected_module = chosen
-    # Preserve the last explicit selection; each dropdown is a real, keyboard-accessible control.
-    non_overview = [st.session_state.get(f"nav_{role}_{g}") for g in groups if g != "Home"]
-    chosen_modules = [x for x in non_overview if x and x != "Overview"]
-    if chosen_modules:
-        selected_module = st.session_state.get(f"active_module_{role}", chosen_modules[0])
-        if selected_module not in chosen_modules:
-            selected_module = chosen_modules[0]
-    else:
-        selected_module = "Overview"
-    # Explicit module selector below the top bar avoids ambiguity when multiple dropdowns have selections.
-    if len(available) > 1:
-        selected_module = st.selectbox("Open module", available, index=available.index(selected_module) if selected_module in available else 0, key=f"module_route_{role}")
-    st.divider()
-    if selected_module == "Overview":
-        st.subheader("Overview")
-        st.write("Choose a module from the navigation above to manage the records available to your role.")
-        st.caption("Modules are being expanded in phases. Records must be restricted by account links and department where configured.")
-        show_announcements(user, manage=role in ("super_admin", "second_admin", "hod"))
-    elif selected_module == "Students": students_module(user)
-    elif selected_module == "Courses": courses_module(user)
-    elif selected_module == "Attendance": attendance_module(user)
-    elif selected_module == "Fees": fees_module(user)
-    elif selected_module == "Library": library_module(user)
-    elif selected_module == "Hostel": hostel_module(user)
-    elif selected_module == "Announcements":
-        if role in ("super_admin", "second_admin", "hod"):
-            st.subheader("Create announcement")
-            with st.form("announcement_form", clear_on_submit=True):
-                title = st.text_input("Announcement title")
-                body = st.text_area("Announcement details", height=120)
-                audience = st.selectbox("Audience", ["Everyone"] + ROLES, format_func=lambda r: "Everyone" if r == "Everyone" else ROLE_LABELS[r])
-                publish = st.form_submit_button("Publish announcement", type="primary")
-            if publish:
-                if not title.strip() or not body.strip(): st.error("Title and details are required.")
-                else: add_announcement(user, title, body, audience); st.success("Announcement published."); st.rerun()
-            st.caption("You can edit or delete an announcement by expanding it below.")
-            show_announcements(user, manage=True)
-        else:
-            show_announcements(user, manage=False)
-    elif selected_module == "User management": admin_users(user)
-    elif selected_module == "AI assistant (Groq)": ai_assistant(user)
-    elif selected_module == "Audit log":
-        if role != "super_admin": st.error("You are not authorized to view the system audit log.")
-        else:
-            with SessionLocal() as db:
-                rows = db.execute(select(AuditLog.created_at, User.username, AuditLog.action, AuditLog.details).outerjoin(User, AuditLog.user_id == User.id).order_by(AuditLog.created_at.desc()).limit(250)).all()
-                data = [{"Time": t, "User": u or "system", "Action": a, "Details": d} for t,u,a,d in rows]
-            if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
-            else: st.info("No audit events yet.")
+    tabs = st.tabs(allowed.get(role, ["Overview","Announcements"]))
+    for tab, label in zip(tabs, allowed.get(role, [])):
+        with tab:
+            if label == "Overview":
+                st.write("Use the tabs to open the tools available to your role.")
+                st.caption("Modules are being expanded in phases. Records visible to a role are filtered by account links and department where configured.")
+            elif label == "Students": students_module(user)
+            elif label == "Courses": courses_module(user)
+            elif label == "Attendance": attendance_module(user)
+            elif label == "Fees": fees_module(user)
+            elif label == "Library": library_module(user)
+            elif label == "Hostel": hostel_module(user)
+            elif label == "Announcements":
+                if role in ("super_admin", "second_admin", "hod"):
+                    with st.form("announcement_form"):
+                        title = st.text_input("Announcement title")
+                        body = st.text_area("Announcement details", height=120)
+                        audience = st.selectbox("Audience", ["Everyone"] + ROLES, format_func=lambda r: "Everyone" if r == "Everyone" else ROLE_LABELS[r])
+                        publish = st.form_submit_button("Publish announcement")
+                    if publish:
+                        if not title.strip() or not body.strip(): st.error("Title and details are required.")
+                        else: add_announcement(user, title, body, audience); st.success("Announcement published."); st.rerun()
+                show_announcements(user)
+            elif label == "User management": admin_users(user)
+            elif label == "AI assistant (Groq)": ai_assistant(user)
+            elif label == "Audit log":
+                with SessionLocal() as db:
+                    rows = db.execute(select(AuditLog.created_at, User.username, AuditLog.action, AuditLog.details).outerjoin(User, AuditLog.user_id == User.id).order_by(AuditLog.created_at.desc()).limit(250)).all()
+                    data = [{"Time": t, "User": u or "system", "Action": a, "Details": d} for t,u,a,d in rows]
+                if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
+                else: st.info("No audit events yet.")
 
 def main():
     user = current_user()
