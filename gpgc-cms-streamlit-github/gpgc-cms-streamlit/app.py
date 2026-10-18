@@ -4,7 +4,7 @@ from datetime import date, datetime
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, String, Integer, Boolean, Date, DateTime, ForeignKey, Text, Float, select, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, InvalidHashError
 
@@ -17,39 +17,44 @@ ROLE_LABELS = {
 }
 ph = PasswordHasher()
 
+# Direct Raw GitHub URL for the official GPGC crest
+GITHUB_LOGO_URL = "https://raw.githubusercontent.com/dawran-waxir/CMS-GPGC-Miran-Shah/main/gpgc-cms-streamlit-github/gpgc-cms-streamlit/logo.jpg"
+
 st.set_page_config(page_title=APP_NAME, page_icon="🎓", layout="wide", initial_sidebar_state="expanded")
 
-# Direct Base64 Embedded Logo fallback
-EMBEDDED_LOGO_B64 = """iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="""
+def get_logo_html(width="65px"):
+    # 1. Try local logo files if present in workspace
+    for local_file in ["logo.jpg", "logo.png"]:
+        if os.path.exists(local_file):
+            try:
+                with open(local_file, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode()
+                ext = "jpeg" if local_file.endswith(".jpg") else "png"
+                return f'<img src="data:image/{ext};base64,{b64}" style="width:{width}; height:auto; border-radius:50%; border:2px solid #d4af37; box-shadow:0 4px 12px rgba(0,0,0,0.22); display:inline-block; vertical-align:middle;">'
+            except Exception:
+                pass
 
-def get_logo_html(width="60px"):
-    if os.path.exists("logo.png"):
-        try:
-            with open("logo.png", "rb") as f:
-                b64 = base64.b64encode(f.read()).decode()
-            return f'<img src="data:image/png;base64,{b64}" style="width:{width}; height:auto; border-radius:50%; border:2px solid #d4af37; box-shadow:0 4px 10px rgba(0,0,0,0.15);">'
-        except Exception:
-            pass
-    return f'<div style="font-size:2.2rem; line-height:1;">🎓</div>'
+    # 2. Fetch directly from your GitHub repository raw URL
+    return f'<img src="{GITHUB_LOGO_URL}" style="width:{width}; height:auto; border-radius:50%; border:2px solid #d4af37; box-shadow:0 4px 12px rgba(0,0,0,0.22); display:inline-block; vertical-align:middle;">'
 
-# High-contrast CSS override fixing contrast, truncation, and layout
+# Senior UI/UX Executive Styling
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+/* Main Canvas & Typography Override */
 html, body, [class*="css"], .stApp {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
-    background-color: #f4f6f9 !important;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    background-color: #f8fafc !important;
     color: #0f172a !important;
 }
 
-/* Force light surface visibility regardless of system dark mode */
 .block-container {
     padding-top: 1.2rem;
-    padding-bottom: 3rem;
-    max-width: 1400px;
+    padding-bottom: 3.5rem;
+    max-width: 1380px;
 }
 
-/* Sidebar styling */
+/* Sidebar Theme Integration */
 [data-testid="stSidebar"] {
     background-color: #ffffff !important;
     border-right: 1px solid #e2e8f0 !important;
@@ -64,12 +69,12 @@ html, body, [class*="css"], .stApp {
 /* Hero Section */
 .hero-card {
     background: linear-gradient(135deg, #4a0e11 0%, #6b1519 55%, #8c1c22 100%);
-    border-radius: 18px;
-    padding: 1.6rem 2rem;
+    border-radius: 20px;
+    padding: 1.8rem 2.2rem;
     color: #ffffff !important;
     border-bottom: 4px solid #d4af37;
-    box-shadow: 0 12px 28px rgba(107, 21, 25, 0.22);
-    margin-bottom: 1.5rem;
+    box-shadow: 0 14px 30px rgba(107, 21, 25, 0.22);
+    margin-bottom: 1.8rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
@@ -77,108 +82,86 @@ html, body, [class*="css"], .stApp {
 .hero-card h1 {
     color: #ffffff !important;
     margin: 0 !important;
-    font-size: 2rem !important;
+    font-size: 2.1rem !important;
     font-weight: 800 !important;
     letter-spacing: -0.02em;
 }
 .hero-card p {
     color: #f3e8c8 !important;
-    margin: 0.35rem 0 0 0 !important;
-    font-size: 0.98rem !important;
+    margin: 0.4rem 0 0 0 !important;
+    font-size: 1rem !important;
     font-weight: 500;
 }
 
-/* Metric Cards Fix */
+/* Metric Cards */
 div[data-testid="stMetric"] {
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    padding: 16px 20px !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+    border-radius: 16px !important;
+    padding: 18px 22px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03) !important;
     border-top: 4px solid #6b1519 !important;
 }
 div[data-testid="stMetric"] label {
     color: #475569 !important;
-    font-weight: 600 !important;
-    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.04em !important;
+    letter-spacing: 0.05em !important;
 }
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     color: #0f172a !important;
     font-weight: 800 !important;
-    font-size: 1.8rem !important;
+    font-size: 2rem !important;
 }
 
-/* Horizontal Scrollable Custom Navbar */
-.nav-scroll-container {
-    display: flex;
-    gap: 0.6rem;
-    background: #ffffff;
-    padding: 0.6rem 0.8rem;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-    margin-bottom: 1.5rem;
-    overflow-x: auto;
-    white-space: nowrap;
+/* Segmented Control Navigation Styling */
+div[data-testid="stPills"] {
+    background: #ffffff !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 16px !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.03) !important;
 }
-
-/* Streamlit Button Styling inside horizontal row */
-div[data-testid="stHorizontalBlock"] button {
+div[data-testid="stPills"] button {
     border-radius: 12px !important;
     font-weight: 700 !important;
-    font-size: 0.88rem !important;
-    padding: 0.5rem 1.1rem !important;
-    min-height: 42px !important;
-    white-space: nowrap !important;
-    width: 100% !important;
+    font-size: 0.9rem !important;
+    padding: 0.45rem 1.1rem !important;
+    color: #334155 !important;
+    border: 1px solid transparent !important;
     transition: all 0.2s ease !important;
 }
-
-div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-    background-color: #f8fafc !important;
-    color: #334155 !important;
-    border: 1px solid #cbd5e1 !important;
-}
-
-div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
-    background-color: #f1f5f9 !important;
-    color: #6b1519 !important;
-    border-color: #6b1519 !important;
-}
-
-div[data-testid="stHorizontalBlock"] button[kind="primary"] {
+div[data-testid="stPills"] button[aria-selected="true"] {
     background: linear-gradient(135deg, #4a0e11, #6b1519) !important;
     color: #ffffff !important;
     border: 1px solid #d4af37 !important;
-    box-shadow: 0 4px 12px rgba(107, 21, 25, 0.28) !important;
+    box-shadow: 0 4px 12px rgba(107, 21, 25, 0.25) !important;
 }
 
-/* Primary buttons across forms */
+/* Form Actions and Inputs */
 button[kind="primary"] {
     background: linear-gradient(135deg, #4a0e11, #6b1519) !important;
-    border-color: #6b1519 !important;
+    border: 1px solid #d4af37 !important;
     border-radius: 10px !important;
     font-weight: 700 !important;
+    color: #ffffff !important;
 }
-
-/* Form Inputs & Dataframe readability */
 .stTextInput input, .stSelectbox select, .stTextArea textarea {
     background-color: #ffffff !important;
     color: #0f172a !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     border: 1px solid #cbd5e1 !important;
 }
 
-/* Section Header Bar */
+/* Header Container */
 .section-header {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding-bottom: 0.75rem;
+    gap: 1.2rem;
+    padding-bottom: 0.85rem;
     border-bottom: 2px solid #e2e8f0;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 .section-header h2 {
     color: #6b1519 !important;
@@ -283,7 +266,6 @@ class AuditLog(Base):
     details: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-
 def get_setting(key, default=None):
     try:
         return st.secrets.get(key, os.getenv(key, default))
@@ -359,26 +341,20 @@ def metric_row(items):
     for col, (label, value) in zip(cols, items):
         col.metric(label, value)
 
-def add_announcement(user, title, body, audience):
-    with SessionLocal() as db:
-        db.add(Announcement(title=title.strip(), body=body.strip(), audience=audience, created_by=user["id"], published=True))
-        audit(db, user["id"], "announcement_created", title.strip())
-        db.commit()
-
 def render_section_header(title, subtitle=""):
-    logo_html = get_logo_html("52px")
+    logo_html = get_logo_html("55px")
     st.markdown(f'''
     <div class="section-header">
         <div>{logo_html}</div>
         <div>
             <h2>{title}</h2>
-            {"<p style='margin:0; color:#64748b; font-weight:500;'>" + subtitle + "</p>" if subtitle else ""}
+            {"<p style='margin:0; color:#64748b; font-weight:500; font-size:0.95rem;'>" + subtitle + "</p>" if subtitle else ""}
         </div>
     </div>
     ''', unsafe_allow_html=True)
 
 def login_screen():
-    logo_html = get_logo_html("75px")
+    logo_html = get_logo_html("80px")
     st.markdown(f'''
     <div class="hero-card">
         <div>{logo_html}</div>
@@ -391,12 +367,12 @@ def login_screen():
     
     left, right = st.columns([1.1, 1])
     with left:
-        st.subheader("Welcome to the Academic Portal")
-        st.write("A centralized workspace for student records, attendance registers, course assignments, library access, fees, and hostel management.")
-        st.info("Sign in using the username and password issued by the college administration.")
+        st.subheader("Academic Management Portal")
+        st.write("A centralized system for academic management, student enrollment, course registration, attendance registers, library access, fees, and hostel management.")
+        st.info("Sign in using credentials issued by the college administration.")
     with right:
         with st.form("login_form", clear_on_submit=False):
-            st.subheader("Sign In")
+            st.subheader("Account Sign In")
             username = st.text_input("Username", autocomplete="username")
             password = st.text_input("Password", type="password", autocomplete="current-password")
             submit = st.form_submit_button("Sign In to Portal", type="primary", use_container_width=True)
@@ -404,7 +380,7 @@ def login_screen():
             if login(username, password):
                 st.rerun()
             else:
-                st.error("Authentication failed. Please verify credentials.")
+                st.error("Authentication failed. Check your username and password.")
 
 def show_announcements(user, manage=False):
     can_manage = manage and user["role"] in ("super_admin", "second_admin", "hod")
@@ -417,7 +393,7 @@ def show_announcements(user, manage=False):
         records = [{"id": r.id, "title": r.title, "body": r.body, "audience": r.audience,
                     "created_at": r.created_at, "published": r.published} for r in rows]
     if not records:
-        st.info("No announcements posted yet.")
+        st.info("No notices or announcements posted yet.")
         return
     for item in records:
         with st.expander(f"{'📌 ' if item['published'] else '📝 Draft · '}{item['title']} · {item['created_at']:%d %b %Y}"):
@@ -439,7 +415,7 @@ def show_announcements(user, manage=False):
                     delete = c2.form_submit_button("Delete Notice", use_container_width=True)
                 if save:
                     if not new_title.strip() or not new_body.strip():
-                        st.error("Title and content required.")
+                        st.error("Title and details are required.")
                     else:
                         with SessionLocal() as db:
                             row = db.get(Announcement, item["id"])
@@ -455,16 +431,16 @@ def show_announcements(user, manage=False):
                         if row:
                             audit(db, user["id"], "announcement_deleted", f"Announcement #{row.id}: {row.title}")
                             db.delete(row); db.commit()
-                    st.success("Announcement removed."); st.rerun()
+                    st.success("Announcement deleted."); st.rerun()
 
 def admin_users(user):
-    render_section_header("User & Role Management", "Manage accounts and permissions across roles")
+    render_section_header("User & Role Management", "Create and manage system user credentials and role authorizations")
     with st.form("create_user_form"):
         a,b = st.columns(2)
         username = a.text_input("Username *").strip().lower()
         full_name = b.text_input("Full Name *").strip()
         email = a.text_input("Email Address").strip()
-        role = b.selectbox("Assigned Role", ROLES, format_func=lambda r: ROLE_LABELS[r])
+        role = b.selectbox("Role", ROLES, format_func=lambda r: ROLE_LABELS[r])
         department = a.text_input("Department / Unit", value="Administration").strip()
         password = b.text_input("Initial Password *", type="password", help="Minimum 12 characters.")
         create = st.form_submit_button("Create Account", type="primary")
@@ -472,7 +448,7 @@ def admin_users(user):
         if not username or not full_name or len(password) < 12:
             st.error("Username, full name, and minimum 12-character password are required.")
         elif role == "super_admin" and user["role"] != "super_admin":
-            st.error("Only Super Admins can assign Super Admin rights.")
+            st.error("Only a Super Admin can create another Super Admin.")
         else:
             with SessionLocal() as db:
                 if db.scalar(select(User).where(User.username == username)):
@@ -480,9 +456,9 @@ def admin_users(user):
                 else:
                     u = User(username=username, full_name=full_name, email=email, role=role, department=department, password_hash=ph.hash(password), active=True)
                     db.add(u); db.flush(); audit(db, user["id"], "user_created", f"Created {username} with role {role}"); db.commit()
-                    st.success(f"Account for {full_name} ({ROLE_LABELS[role]}) created.")
+                    st.success(f"Account for {full_name} ({ROLE_LABELS[role]}) created successfully.")
                     st.rerun()
-    st.markdown("#### User Accounts")
+    st.markdown("#### User Accounts Directory")
     statement = select(User.id, User.username, User.full_name, User.email, User.role, User.department, User.active, User.created_at).order_by(User.id.desc())
     if user["role"] != "super_admin": statement = statement.where(User.role != "super_admin")
     data = df_query(statement)
@@ -491,28 +467,28 @@ def admin_users(user):
         st.dataframe(data, use_container_width=True, hide_index=True)
 
 def students_module(user):
-    render_section_header("Student Records", "Academic directory and enrollment profiles")
+    render_section_header("Student Directory", "Manage enrollment profiles and academic standing")
     if user["role"] in ("super_admin", "second_admin", "hod"):
-        with st.expander("Register New Student", expanded=False):
+        with st.expander("Register New Student Profile", expanded=False):
             with st.form("add_student"):
                 c1,c2 = st.columns(2)
-                student_no = c1.text_input("Roll / Student No *").strip()
+                student_no = c1.text_input("Student Roll No *").strip()
                 name = c2.text_input("Full Name *").strip()
-                program = c1.text_input("Academic Program (e.g. BS CS)").strip()
+                program = c1.text_input("Program (e.g. BS Computer Science)").strip()
                 department = c2.text_input("Department").strip()
                 session = c1.text_input("Academic Session (e.g. 2026-2028)").strip()
                 status = c2.selectbox("Status", ["Active", "On Leave", "Graduated", "Withdrawn"])
                 save = st.form_submit_button("Save Student", type="primary")
             if save:
-                if not student_no or not name: st.error("Roll number and name required.")
+                if not student_no or not name: st.error("Roll number and student name required.")
                 else:
                     with SessionLocal() as db:
                         if db.scalar(select(Student).where(Student.student_no == student_no)):
-                            st.error("Student Roll No already exists.")
+                            st.error("Roll number already exists.")
                         else:
                             db.add(Student(student_no=student_no, full_name=name, program=program, department=department, academic_session=session, status=status))
                             audit(db, user["id"], "student_created", f"Student {student_no}"); db.commit()
-                            st.success("Student profile created."); st.rerun()
+                            st.success("Student profile registered."); st.rerun()
     with SessionLocal() as db:
         q = select(Student)
         if user["role"] == "student": q = q.where(Student.user_id == user["id"])
@@ -521,12 +497,12 @@ def students_module(user):
         records = db.scalars(q.order_by(Student.full_name)).all()
         rows = [{"Roll No": x.student_no, "Name": x.full_name, "Program": x.program, "Department": x.department, "Session": x.academic_session, "Status": x.status} for x in records]
     if rows: st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-    else: st.info("No student records available.")
+    else: st.info("No student records found.")
 
 def courses_module(user):
-    render_section_header("Courses & Teaching Assignments", "Curriculum structure and teacher allocations")
+    render_section_header("Courses & Teaching Assignments", "Academic curriculum and faculty course scheduling")
     if user["role"] in ("super_admin", "second_admin", "hod"):
-        with st.expander("Add New Course"):
+        with st.expander("Create Course Entry"):
             with st.form("add_course"):
                 a,b = st.columns(2)
                 code = a.text_input("Course Code *").strip().upper()
@@ -542,13 +518,13 @@ def courses_module(user):
                 teacher_label = st.selectbox("Assigned Instructor", ["Unassigned"] + list(teacher_options))
                 save = st.form_submit_button("Save Course", type="primary")
             if save:
-                if not code or not title: st.error("Course code and title required.")
+                if not code or not title: st.error("Course code and title are required.")
                 else:
                     with SessionLocal() as db:
-                        if db.scalar(select(Course).where(Course.code == code)): st.error("Course code exists.")
+                        if db.scalar(select(Course).where(Course.code == code)): st.error("Course code already exists.")
                         else:
                             db.add(Course(code=code, title=title, department=dept, program=program, term=term, credits=int(credits), teacher_user_id=teacher_options.get(teacher_label)))
-                            audit(db, user["id"], "course_created", code); db.commit(); st.success("Course added."); st.rerun()
+                            audit(db, user["id"], "course_created", code); db.commit(); st.success("Course entry saved."); st.rerun()
     with SessionLocal() as db:
         q = select(Course, User.full_name).outerjoin(User, Course.teacher_user_id == User.id)
         if user["role"] == "teacher": q = q.where(Course.teacher_user_id == user["id"])
@@ -557,7 +533,7 @@ def courses_module(user):
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
 def attendance_module(user):
-    render_section_header("Attendance Register", "Class attendance tracking and history")
+    render_section_header("Attendance Register", "Class attendance tracking and status logs")
     if user["role"] in ("teacher", "super_admin", "second_admin", "hod"):
         with SessionLocal() as db:
             cq = select(Course)
@@ -576,7 +552,7 @@ def attendance_module(user):
             if save:
                 with SessionLocal() as db:
                     db.add(Attendance(student_id=student_map[selected_student], course_id=course_map[selected_course], attendance_date=att_date, status=status, recorded_by=user["id"]))
-                    audit(db, user["id"], "attendance_recorded", f"{selected_student}, {att_date}"); db.commit(); st.success("Attendance saved."); st.rerun()
+                    audit(db, user["id"], "attendance_recorded", f"{selected_student}, {att_date}"); db.commit(); st.success("Attendance entry saved."); st.rerun()
     with SessionLocal() as db:
         q = select(Attendance.attendance_date, Student.student_no, Student.full_name, Course.code, Course.title, Attendance.status).join(Student, Attendance.student_id == Student.id).join(Course, Attendance.course_id == Course.id).order_by(Attendance.attendance_date.desc()).limit(300)
         rows = db.execute(q).all()
@@ -584,7 +560,7 @@ def attendance_module(user):
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
 def library_module(user):
-    render_section_header("Library Catalogue", "Resource inventory and availability")
+    render_section_header("Library Catalogue", "Book inventory and availability catalog")
     if user["role"] in ("librarian", "super_admin", "second_admin"):
         with st.expander("Add Catalogue Entry"):
             with st.form("add_book"):
@@ -596,18 +572,18 @@ def library_module(user):
                 copies = a.number_input("Copies", min_value=1, value=1)
                 save = st.form_submit_button("Add Entry", type="primary")
             if save:
-                if not accession or not title: st.error("Accession number and title required.")
+                if not accession or not title: st.error("Accession number and title are required.")
                 else:
                     with SessionLocal() as db:
                         db.add(Book(accession_no=accession, title=title, author=author, category=category, total_copies=int(copies), available_copies=int(copies)))
-                        audit(db, user["id"], "book_created", accession); db.commit(); st.success("Book added."); st.rerun()
+                        audit(db, user["id"], "book_created", accession); db.commit(); st.success("Book added to catalog."); st.rerun()
     with SessionLocal() as db:
         books = db.scalars(select(Book).order_by(Book.title)).all()
         data = [{"Accession": b.accession_no, "Title": b.title, "Author": b.author, "Category": b.category, "Total": b.total_copies, "Available": b.available_copies} for b in books]
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
 def hostel_module(user):
-    render_section_header("Hostel Facilities", "Room occupancy and capacity monitoring")
+    render_section_header("Hostel Facilities", "Room allocations and occupancy tracking")
     if user["role"] in ("hostel_warden", "super_admin", "second_admin"):
         with st.expander("Add Hostel Room"):
             with st.form("add_room"):
@@ -629,9 +605,9 @@ def hostel_module(user):
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
 def fees_module(user):
-    render_section_header("Fee Records", "Student fee ledgers and status")
+    render_section_header("Fee Records", "Student tuition ledgers and fee status")
     if user["role"] in ("super_admin", "second_admin"):
-        with st.expander("Issue Fee Notice"):
+        with st.expander("Issue Fee Record"):
             with SessionLocal() as db:
                 students = db.scalars(select(Student).order_by(Student.full_name)).all()
             if students:
@@ -655,14 +631,14 @@ def fees_module(user):
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
 def ai_assistant(user):
-    render_section_header("AI Academic Assistant", "Powered by Groq Llama-3.3")
+    render_section_header("AI Academic Assistant", "Powered by Groq LLM integration")
     key = get_setting("GROQ_API_KEY")
     if not key:
-        st.warning("Please configure `GROQ_API_KEY` in Streamlit secrets to enable AI query support.")
+        st.warning("Configure `GROQ_API_KEY` in Streamlit secrets to activate AI query capabilities.")
         return
-    prompt = st.text_area("Your Academic or Administrative Query", placeholder="Ask a question...", height=110)
-    if st.button("Submit Query to AI", type="primary"):
-        if not prompt.strip(): st.error("Please enter a prompt.")
+    prompt = st.text_area("Your Query", placeholder="Ask any study, procedural, or academic question...", height=110)
+    if st.button("Ask AI Assistant", type="primary"):
+        if not prompt.strip(): st.error("Please enter a question.")
         else:
             try:
                 from groq import Groq
@@ -676,9 +652,8 @@ def ai_assistant(user):
 
 def dashboard(user):
     role = user["role"]
-    logo_html = get_logo_html("64px")
+    logo_html = get_logo_html("72px")
     
-    # Custom Hero Banner
     st.markdown(f'''
     <div class="hero-card">
         <div>{logo_html}</div>
@@ -695,7 +670,7 @@ def dashboard(user):
         n_courses = db.scalar(select(func.count()).select_from(Course)) or 0
         n_ann = db.scalar(select(func.count()).select_from(Announcement).where(Announcement.published == True)) or 0
 
-    metric_row([("Active Accounts", n_users), ("Total Students", n_students), ("Courses", n_courses), ("Notices", n_ann)])
+    metric_row([("Active Accounts", n_users), ("Total Students", n_students), ("Courses Offered", n_courses), ("Active Notices", n_ann)])
     st.write("")
 
     allowed = {
@@ -715,21 +690,21 @@ def dashboard(user):
     if state_key not in st.session_state or st.session_state[state_key] not in available:
         st.session_state[state_key] = "Overview"
 
-    # Dynamic horizontal layout sizing each column to content preventing button truncation
-    nav_cols = st.columns(len(available))
-    for col, mod in zip(nav_cols, available):
-        with col:
-            is_active = (st.session_state[state_key] == mod)
-            btn_type = "primary" if is_active else "secondary"
-            if st.button(mod, key=f"nav_{role}_{mod}", type=btn_type, use_container_width=True):
-                st.session_state[state_key] = mod
-                st.rerun()
+    # Segmented Control Pills Navigation
+    selected_module = st.pills(
+        label="Portal Navigation",
+        options=available,
+        default=st.session_state[state_key],
+        key=f"pills_nav_{role}",
+        label_visibility="collapsed"
+    )
+    if selected_module:
+        st.session_state[state_key] = selected_module
 
-    selected_module = st.session_state[state_key]
-    st.markdown("<hr style='margin-top:0.25rem; margin-bottom:1.5rem; border-color:#cbd5e1;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin-top:0.6rem; margin-bottom:1.5rem; border-color:#cbd5e1;'>", unsafe_allow_html=True)
 
     if selected_module == "Overview":
-        render_section_header("Overview & Announcements", f"Welcome back, {user['full_name']}")
+        render_section_header("Overview & Notices", f"Welcome back, {user['full_name']}")
         show_announcements(user, manage=role in ("super_admin", "second_admin", "hod"))
     elif selected_module == "Students": students_module(user)
     elif selected_module == "Courses": courses_module(user)
@@ -741,7 +716,7 @@ def dashboard(user):
     elif selected_module == "User Management": admin_users(user)
     elif selected_module == "AI Assistant": ai_assistant(user)
     elif selected_module == "Audit Log":
-        render_section_header("System Audit Log", "Security events and user actions")
+        render_section_header("System Audit Log", "Security events and user system logs")
         if role != "super_admin": st.error("Unauthorized.")
         else:
             with SessionLocal() as db:
@@ -755,12 +730,12 @@ def main():
         login_screen()
         return
     with st.sidebar:
-        logo_html = get_logo_html("80px")
+        logo_html = get_logo_html("85px")
         st.markdown(f'<div style="text-align:center; margin-bottom:0.75rem;">{logo_html}</div>', unsafe_allow_html=True)
-        st.markdown(f"<h3 style='margin:0; text-align:center; color:#6b1519;'>{user['full_name']}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align:center; color:#64748b; font-size:0.88rem; font-weight:600;'>{ROLE_LABELS.get(user['role'], user['role'])}</p>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='margin:0; text-align:center; color:#6b1519; font-weight:800;'>{user['full_name']}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align:center; color:#475569; font-size:0.88rem; font-weight:700;'>{ROLE_LABELS.get(user['role'], user['role'])}</p>", unsafe_allow_html=True)
         if user["department"]:
-            st.markdown(f"<p style='text-align:center; color:#94a3b8; font-size:0.8rem;'>{user['department']}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align:center; color:#64748b; font-size:0.82rem;'>{user['department']}</p>", unsafe_allow_html=True)
         st.divider()
         if st.button("Sign Out", use_container_width=True):
             with SessionLocal() as db:
