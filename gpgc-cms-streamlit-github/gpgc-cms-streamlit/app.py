@@ -148,7 +148,7 @@ div[data-testid="stPills"] button[aria-selected="true"] {
 
 /* Primary Button Styling & Hover State */
 button[kind="primary"] {
-    background: linear-gradient(135deg, #4a0e11, #6b1519) !important;
+    background: linear-gradient(135deg, #640505, #640505) !important;
     border: 1px solid #d4af37 !important;
     border-radius: 10px !important;
     font-weight: 700 !important;
