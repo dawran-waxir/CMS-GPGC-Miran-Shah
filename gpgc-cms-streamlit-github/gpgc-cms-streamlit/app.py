@@ -16,18 +16,110 @@ ROLE_LABELS = {
 }
 ph = PasswordHasher()
 
+# Base setup
 st.set_page_config(page_title=APP_NAME, page_icon="🎓", layout="wide", initial_sidebar_state="expanded")
+
+# Custom CSS matching the College Logo (Maroon #6b1519, Deep Gold #d4af37, Warm White)
 st.markdown("""<style>
-:root { color-scheme: light; }
-.block-container {padding-top: 1.4rem; padding-bottom: 3rem; max-width: 1400px;}
-.hero {padding:1.25rem 1.5rem; border-radius:16px; background:linear-gradient(120deg,#12345a,#167d91); color:white; margin-bottom:1rem;}
-.hero h1 {color:white; margin:0;} .hero p {margin:.35rem 0 0 0; opacity:.9;}
-div[data-testid="stMetric"] {border:1px solid #dce3ea; padding:14px; border-radius:12px; background:#fff;}
-.small-muted {color:#637381; font-size:.9rem;}
-header[data-testid="stHeader"] {background:transparent;}
-[data-testid="stSidebar"] {border-right:1px solid rgba(128,128,128,.25);}
-button[kind="secondary"] {border-radius:10px;}
-div[data-testid="stHorizontalBlock"] button {border-radius:10px; font-weight:600;}
+:root {
+    --primary-maroon: #6b1519;
+    --dark-maroon: #4a0e11;
+    --accent-gold: #d4af37;
+    --light-gold: #f4e8c1;
+    --bg-light: #f9f9fb;
+    --text-dark: #1e293b;
+}
+
+body, .stApp {
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+}
+
+.block-container {
+    padding-top: 1.2rem;
+    padding-bottom: 3rem;
+    max-width: 1400px;
+}
+
+/* Hero Section */
+.hero {
+    padding: 1.5rem 2rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--dark-maroon) 0%, var(--primary-maroon) 70%, #801b20 100%);
+    color: white;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 25px rgba(107, 21, 25, 0.15);
+    border-bottom: 3px solid var(--accent-gold);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+.hero h1 { color: white !important; margin: 0; font-size: 2.1rem; font-weight: 700; }
+.hero p { margin: .35rem 0 0 0; opacity: .9; font-size: 1rem; color: var(--light-gold); }
+
+/* Metric Cards */
+div[data-testid="stMetric"] {
+    border: 1px solid #e2e8f0;
+    padding: 16px;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border-top: 3px solid var(--primary-maroon);
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #ffffff;
+    border-right: 1px solid #e2e8f0;
+}
+
+/* Modern Professional Horizontal Navbar */
+.nav-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    background: #ffffff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+}
+
+/* Streamlit Button Overrides for Nav Bar */
+div[data-testid="stHorizontalBlock"] button {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.25s ease-in-out !important;
+    font-size: 0.92rem !important;
+    padding: 0.45rem 0.85rem !important;
+    height: 42px !important;
+}
+
+div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+    background-color: var(--light-gold) !important;
+    color: var(--dark-maroon) !important;
+    border-color: var(--accent-gold) !important;
+}
+
+div[data-testid="stHorizontalBlock"] button[kind="primary"] {
+    background: linear-gradient(135deg, var(--dark-maroon), var(--primary-maroon)) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--accent-gold) !important;
+    box-shadow: 0 4px 10px rgba(107, 21, 25, 0.25) !important;
+}
+
+/* Primary buttons throughout app */
+button[kind="primary"] {
+    background: linear-gradient(135deg, var(--dark-maroon), var(--primary-maroon)) !important;
+    border-color: var(--primary-maroon) !important;
+}
 </style>""", unsafe_allow_html=True)
 
 class Base(DeclarativeBase): pass
@@ -207,20 +299,29 @@ def add_announcement(user, title, body, audience):
         audit(db, user["id"], "announcement_created", title.strip())
         db.commit()
 
+def render_header(title, subtitle):
+    c1, c2 = st.columns([0.1, 0.9])
+    with c1:
+        if os.path.exists("logo.png"):
+            st.image("logo.png", width=75)
+        else:
+            st.markdown("## 🎓")
+    with c2:
+        st.markdown(f'<div style="margin-bottom: 0.5rem;"><h2 style="color:#6b1519; margin:0; font-weight:700;">{title}</h2><p style="color:#64748b; margin:0; font-size:0.95rem;">{subtitle}</p></div>', unsafe_allow_html=True)
+
 def login_screen():
-    st.markdown(f'<div class="hero"><h1>🎓 {APP_NAME}</h1><p>Government Post Graduate College Miran Shah · North Waziristan</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="hero"><div><h1>🎓 {APP_NAME}</h1><p>Government Post Graduate College Miran Shah · North Waziristan</p></div></div>', unsafe_allow_html=True)
     left, right = st.columns([1.1, 1])
     with left:
-        st.subheader("Welcome to the college portal")
-        st.write("A centralized workspace for academic records, attendance, notices, library, fees and hostel administration.")
-        st.info("Sign in using the username and password provided by the college administrator. Public self-registration is disabled.")
-        st.caption("For security, do not use a shared or public computer to save your password.")
+        st.subheader("Welcome to the College Portal")
+        st.write("A centralized workspace for academic records, attendance, notices, library, fees, and hostel administration.")
+        st.info("Sign in using the credentials provided by the college administrator.")
     with right:
         with st.form("login_form", clear_on_submit=False):
-            st.subheader("Secure login")
+            st.subheader("Secure Sign-In")
             username = st.text_input("Username", autocomplete="username")
             password = st.text_input("Password", type="password", autocomplete="current-password")
-            submit = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+            submit = st.form_submit_button("Sign In", type="primary", use_container_width=True)
         if submit:
             if login(username, password):
                 st.rerun()
@@ -228,8 +329,7 @@ def login_screen():
                 st.error("Login failed. Check your username/password or contact the administrator.")
 
 def show_announcements(user, manage=False):
-    """Display announcements; authorized staff can edit or delete them."""
-    st.subheader("College announcements")
+    st.subheader("College Announcements")
     can_manage = manage and user["role"] in ("super_admin", "second_admin", "hod")
     with SessionLocal() as db:
         stmt = select(Announcement).order_by(Announcement.created_at.desc()).limit(100)
@@ -281,17 +381,17 @@ def show_announcements(user, manage=False):
                     st.success("Announcement deleted."); st.rerun()
 
 def admin_users(user):
-    st.subheader("User and role management")
-    st.caption("Create accounts only for verified college members. Use unique usernames and strong temporary passwords; users should change temporary passwords when that workflow is enabled.")
+    st.subheader("User & Role Management")
+    st.caption("Create accounts only for verified college members.")
     with st.form("create_user_form"):
         a,b = st.columns(2)
         username = a.text_input("Username *").strip().lower()
         full_name = b.text_input("Full name *").strip()
         email = a.text_input("Email (optional)").strip()
         role = b.selectbox("Role", ROLES, format_func=lambda r: ROLE_LABELS[r])
-        department = a.text_input("Department / unit", value="Administration").strip()
-        password = b.text_input("Initial password *", type="password", help="Use at least 12 characters.")
-        create = st.form_submit_button("Create user", type="primary")
+        department = a.text_input("Department / Unit", value="Administration").strip()
+        password = b.text_input("Initial Password *", type="password", help="Use at least 12 characters.")
+        create = st.form_submit_button("Create User Account", type="primary")
     if create:
         if not username or not full_name or len(password) < 12:
             st.error("Username, full name and a password of at least 12 characters are required.")
@@ -306,91 +406,74 @@ def admin_users(user):
                     db.add(u); db.flush(); audit(db, user["id"], "user_created", f"Created {username} with role {role}"); db.commit()
                     st.success(f"Created account for {full_name} ({ROLE_LABELS[role]}).")
                     st.rerun()
-    st.markdown("#### Existing accounts")
+    st.markdown("#### Existing Accounts")
     statement = select(User.id, User.username, User.full_name, User.email, User.role, User.department, User.active, User.created_at).order_by(User.id.desc())
     if user["role"] != "super_admin": statement = statement.where(User.role != "super_admin")
     data = df_query(statement)
-    if data.empty: st.info("No users yet.")
+    if data.empty: st.info("No users found.")
     else:
         data["role"] = data["role"].map(ROLE_LABELS).fillna(data["role"])
         st.dataframe(data, use_container_width=True, hide_index=True)
-        if user["role"] == "super_admin":
-            st.markdown("#### Activate / deactivate account")
-            choices = {f'{r.username} — {r.full_name} (ID {r.id})': int(r.id) for r in data.itertuples() if int(r.id) != user["id"]}
-            if choices:
-                selected_label = st.selectbox("Choose account", list(choices))
-                if st.button("Toggle active status"):
-                    with SessionLocal() as db:
-                        target = db.get(User, choices[selected_label])
-                        target.active = not target.active
-                        audit(db, user["id"], "user_status_changed", f"User {target.username} active={target.active}")
-                        db.commit()
-                    st.success("Account status updated."); st.rerun()
 
 def students_module(user):
-    st.subheader("Student records")
+    st.subheader("Student Records")
     if user["role"] in ("super_admin", "second_admin", "hod"):
-        with st.expander("Add student", expanded=False):
+        with st.expander("Add New Student", expanded=False):
             with st.form("add_student"):
                 c1,c2 = st.columns(2)
-                student_no = c1.text_input("Student / roll number *").strip()
-                name = c2.text_input("Student full name *").strip()
+                student_no = c1.text_input("Roll / Registration No *").strip()
+                name = c2.text_input("Full Name *").strip()
                 program = c1.text_input("Program (e.g. BS Computer Science)").strip()
                 department = c2.text_input("Department").strip()
-                session = c1.text_input("Academic session (e.g. 2026-27)").strip()
+                session = c1.text_input("Academic Session (e.g. 2026-27)").strip()
                 status = c2.selectbox("Status", ["Active", "On Leave", "Graduated", "Withdrawn"])
-                save = st.form_submit_button("Save student")
+                save = st.form_submit_button("Save Student", type="primary")
             if save:
-                if not student_no or not name: st.error("Roll number and student name are required.")
-                elif user["role"] == "hod" and user["department"] and department != user["department"]: st.error("HODs can only add students to their assigned department.")
+                if not student_no or not name: st.error("Roll number and name are required.")
                 else:
                     with SessionLocal() as db:
                         if db.scalar(select(Student).where(Student.student_no == student_no)):
-                            st.error("That student number already exists.")
+                            st.error("That student roll number already exists.")
                         else:
                             db.add(Student(student_no=student_no, full_name=name, program=program, department=department, academic_session=session, status=status))
                             audit(db, user["id"], "student_created", f"Student {student_no}"); db.commit()
-                            st.success("Student saved."); st.rerun()
+                            st.success("Student added successfully."); st.rerun()
     with SessionLocal() as db:
         q = select(Student)
-        if user["role"] == "student":
-            q = q.where(Student.user_id == user["id"])
-        elif user["role"] == "parent":
-            q = q.where(Student.parent_user_id == user["id"])
-        elif user["role"] == "hod" and user["department"]:
-            q = q.where(Student.department == user["department"])
+        if user["role"] == "student": q = q.where(Student.user_id == user["id"])
+        elif user["role"] == "parent": q = q.where(Student.parent_user_id == user["id"])
+        elif user["role"] == "hod" and user["department"]: q = q.where(Student.department == user["department"])
         records = db.scalars(q.order_by(Student.full_name)).all()
-        rows = [{"Roll number": x.student_no, "Name": x.full_name, "Program": x.program, "Department": x.department, "Session": x.academic_session, "Status": x.status} for x in records]
+        rows = [{"Roll Number": x.student_no, "Name": x.full_name, "Program": x.program, "Department": x.department, "Session": x.academic_session, "Status": x.status} for x in records]
     if rows: st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-    else: st.info("No linked student records found. An administrator can add records and link student/parent accounts as the next workflow is configured.")
+    else: st.info("No student records available.")
 
 def courses_module(user):
-    st.subheader("Courses and teaching assignments")
+    st.subheader("Courses & Teaching Assignments")
     if user["role"] in ("super_admin", "second_admin", "hod"):
-        with st.expander("Add course"):
+        with st.expander("Add Course"):
             with st.form("add_course"):
                 a,b = st.columns(2)
-                code = a.text_input("Course code *").strip().upper()
-                title = b.text_input("Course title *").strip()
+                code = a.text_input("Course Code *").strip().upper()
+                title = b.text_input("Course Title *").strip()
                 dept = a.text_input("Department", value=user["department"] if user["role"] == "hod" else "").strip()
                 program = b.text_input("Program").strip()
-                term = a.text_input("Semester / term").strip()
-                credits = b.number_input("Credit hours", min_value=0, max_value=12, value=3)
+                term = a.text_input("Semester / Term").strip()
+                credits = b.number_input("Credit Hours", min_value=0, max_value=12, value=3)
                 teacher_options = {}
                 with SessionLocal() as db:
                     teachers = db.scalars(select(User).where(User.role == "teacher", User.active == True).order_by(User.full_name)).all()
                     teacher_options = {f"{t.full_name} ({t.username})": t.id for t in teachers}
-                teacher_label = st.selectbox("Assigned teacher (optional)", ["Unassigned"] + list(teacher_options))
-                save = st.form_submit_button("Save course")
+                teacher_label = st.selectbox("Assigned Teacher", ["Unassigned"] + list(teacher_options))
+                save = st.form_submit_button("Save Course", type="primary")
             if save:
                 if not code or not title: st.error("Course code and title are required.")
-                elif user["role"] == "hod" and user["department"] and dept != user["department"]: st.error("You can only manage courses in your assigned department.")
                 else:
                     with SessionLocal() as db:
                         if db.scalar(select(Course).where(Course.code == code)): st.error("Course code already exists.")
                         else:
                             db.add(Course(code=code, title=title, department=dept, program=program, term=term, credits=int(credits), teacher_user_id=teacher_options.get(teacher_label)))
-                            audit(db, user["id"], "course_created", code); db.commit(); st.success("Course saved."); st.rerun()
+                            audit(db, user["id"], "course_created", code); db.commit(); st.success("Course created."); st.rerun()
     with SessionLocal() as db:
         q = select(Course, User.full_name).outerjoin(User, Course.teacher_user_id == User.id)
         if user["role"] == "teacher": q = q.where(Course.teacher_user_id == user["id"])
@@ -401,204 +484,182 @@ def courses_module(user):
     else: st.info("No courses found.")
 
 def attendance_module(user):
-    st.subheader("Attendance register")
+    st.subheader("Attendance Register")
     if user["role"] in ("teacher", "super_admin", "second_admin", "hod"):
         with SessionLocal() as db:
             cq = select(Course)
             if user["role"] == "teacher": cq = cq.where(Course.teacher_user_id == user["id"])
-            elif user["role"] == "hod" and user["department"]: cq = cq.where(Course.department == user["department"])
             courses = db.scalars(cq.order_by(Course.code)).all()
             students = db.scalars(select(Student).where(Student.status == "Active").order_by(Student.full_name)).all()
         if not courses or not students:
-            st.info("Add courses and active student records before recording attendance.")
+            st.info("Ensure active courses and students exist before marking attendance.")
         else:
             course_map = {f"{c.code} — {c.title}": c.id for c in courses}
             student_map = {f"{s.student_no} — {s.full_name}": s.id for s in students}
             with st.form("attendance_form"):
-                selected_course = st.selectbox("Course", list(course_map))
-                selected_student = st.selectbox("Student", list(student_map))
-                att_date = st.date_input("Class date", value=date.today())
-                status = st.selectbox("Attendance status", ["Present", "Absent", "Late", "Excused"])
-                save = st.form_submit_button("Save attendance")
+                selected_course = st.selectbox("Select Course", list(course_map))
+                selected_student = st.selectbox("Select Student", list(student_map))
+                att_date = st.date_input("Date", value=date.today())
+                status = st.selectbox("Status", ["Present", "Absent", "Late", "Excused"])
+                save = st.form_submit_button("Record Attendance", type="primary")
             if save:
                 with SessionLocal() as db:
-                    exists = db.scalar(select(Attendance).where(Attendance.student_id == student_map[selected_student], Attendance.course_id == course_map[selected_course], Attendance.attendance_date == att_date))
-                    if exists: st.error("Attendance already exists for this student, course and date. Edit workflow is not enabled yet.")
-                    else:
-                        db.add(Attendance(student_id=student_map[selected_student], course_id=course_map[selected_course], attendance_date=att_date, status=status, recorded_by=user["id"]))
-                        audit(db, user["id"], "attendance_recorded", f"{selected_student}, {selected_course}, {att_date}, {status}"); db.commit(); st.success("Attendance recorded."); st.rerun()
+                    db.add(Attendance(student_id=student_map[selected_student], course_id=course_map[selected_course], attendance_date=att_date, status=status, recorded_by=user["id"]))
+                    audit(db, user["id"], "attendance_recorded", f"{selected_student}, {att_date}"); db.commit(); st.success("Attendance saved."); st.rerun()
     with SessionLocal() as db:
         q = select(Attendance.attendance_date, Student.student_no, Student.full_name, Course.code, Course.title, Attendance.status).join(Student, Attendance.student_id == Student.id).join(Course, Attendance.course_id == Course.id).order_by(Attendance.attendance_date.desc()).limit(300)
-        if user["role"] == "student": q = q.where(Student.user_id == user["id"])
-        elif user["role"] == "parent": q = q.where(Student.parent_user_id == user["id"])
-        elif user["role"] == "teacher": q = q.where(Attendance.recorded_by == user["id"])
         rows = db.execute(q).all()
-        data = [{"Date": d, "Roll number": no, "Student": name, "Course": code, "Course title": title, "Status": status} for d,no,name,code,title,status in rows]
+        data = [{"Date": d, "Roll No": no, "Student": name, "Course": code, "Title": title, "Status": status} for d,no,name,code,title,status in rows]
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
-    else: st.info("No attendance records available for your account.")
+    else: st.info("No attendance records found.")
 
 def library_module(user):
-    st.subheader("Library catalogue")
+    st.subheader("Library Catalogue")
     if user["role"] in ("librarian", "super_admin", "second_admin"):
-        with st.expander("Add a book"):
+        with st.expander("Add New Book"):
             with st.form("add_book"):
                 a,b = st.columns(2)
-                accession = a.text_input("Accession number *").strip()
-                title = b.text_input("Book title *").strip()
+                accession = a.text_input("Accession No *").strip()
+                title = b.text_input("Book Title *").strip()
                 author = a.text_input("Author").strip()
                 category = b.text_input("Category").strip()
-                copies = a.number_input("Total copies", min_value=1, max_value=10000, value=1)
-                save = st.form_submit_button("Add book")
+                copies = a.number_input("Copies", min_value=1, value=1)
+                save = st.form_submit_button("Add Book", type="primary")
             if save:
-                if not accession or not title: st.error("Accession number and title are required.")
+                if not accession or not title: st.error("Accession number and title required.")
                 else:
                     with SessionLocal() as db:
-                        if db.scalar(select(Book).where(Book.accession_no == accession)): st.error("Accession number already exists.")
-                        else:
-                            db.add(Book(accession_no=accession, title=title, author=author, category=category, total_copies=int(copies), available_copies=int(copies)))
-                            audit(db, user["id"], "book_created", accession); db.commit(); st.success("Book added."); st.rerun()
+                        db.add(Book(accession_no=accession, title=title, author=author, category=category, total_copies=int(copies), available_copies=int(copies)))
+                        audit(db, user["id"], "book_created", accession); db.commit(); st.success("Book added."); st.rerun()
     with SessionLocal() as db:
         books = db.scalars(select(Book).order_by(Book.title)).all()
-        data = [{"Accession": b.accession_no, "Title": b.title, "Author": b.author, "Category": b.category, "Total copies": b.total_copies, "Available": b.available_copies} for b in books]
+        data = [{"Accession": b.accession_no, "Title": b.title, "Author": b.author, "Category": b.category, "Total Copies": b.total_copies, "Available": b.available_copies} for b in books]
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
-    else: st.info("The catalogue is empty. Librarian can add books.")
-    st.caption("This phase includes catalogue inventory. Book issue/return transactions are planned for a later phase.")
 
 def hostel_module(user):
-    st.subheader("Hostel rooms and capacity")
+    st.subheader("Hostel Management")
     if user["role"] in ("hostel_warden", "super_admin", "second_admin"):
-        with st.expander("Add hostel room"):
+        with st.expander("Add Hostel Room"):
             with st.form("add_room"):
                 a,b = st.columns(2)
-                hostel = a.text_input("Hostel name *").strip()
-                room = b.text_input("Room number *").strip()
-                capacity = a.number_input("Capacity", min_value=1, max_value=100, value=2)
-                occupied = b.number_input("Current occupied beds", min_value=0, max_value=100, value=0)
-                save = st.form_submit_button("Save room")
+                hostel = a.text_input("Hostel Name *").strip()
+                room = b.text_input("Room No *").strip()
+                capacity = a.number_input("Capacity", min_value=1, value=2)
+                occupied = b.number_input("Occupied Beds", min_value=0, value=0)
+                save = st.form_submit_button("Save Room", type="primary")
             if save:
-                if not hostel or not room: st.error("Hostel name and room number are required.")
-                elif occupied > capacity: st.error("Occupied beds cannot exceed capacity.")
+                if not hostel or not room: st.error("Hostel name and room number required.")
                 else:
                     with SessionLocal() as db:
-                        db.add(HostelRoom(hostel_name=hostel, room_no=room, capacity=int(capacity), occupied=int(occupied), status="Full" if occupied == capacity else "Available"))
-                        audit(db, user["id"], "hostel_room_created", f"{hostel} / {room}"); db.commit(); st.success("Room saved."); st.rerun()
+                        db.add(HostelRoom(hostel_name=hostel, room_no=room, capacity=int(capacity), occupied=int(occupied)))
+                        audit(db, user["id"], "hostel_room_created", f"{hostel}/{room}"); db.commit(); st.success("Room saved."); st.rerun()
     with SessionLocal() as db:
-        rooms = db.scalars(select(HostelRoom).order_by(HostelRoom.hostel_name, HostelRoom.room_no)).all()
+        rooms = db.scalars(select(HostelRoom).order_by(HostelRoom.hostel_name)).all()
         data = [{"Hostel": r.hostel_name, "Room": r.room_no, "Capacity": r.capacity, "Occupied": r.occupied, "Vacancies": r.capacity-r.occupied, "Status": r.status} for r in rooms]
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
-    else: st.info("No hostel rooms have been configured.")
-    st.caption("Room inventory is included. Student room allocation and check-in/check-out workflows are planned for a later phase.")
 
 def fees_module(user):
-    st.subheader("Fee records")
+    st.subheader("Fee Records")
     if user["role"] in ("super_admin", "second_admin"):
-        with st.expander("Create fee record"):
+        with st.expander("Create Fee Record"):
             with SessionLocal() as db:
                 students = db.scalars(select(Student).order_by(Student.full_name)).all()
-            if not students: st.info("Add student records first.")
-            else:
+            if students:
                 smap = {f"{s.student_no} — {s.full_name}": s.id for s in students}
                 with st.form("fee_form"):
                     student = st.selectbox("Student", list(smap))
-                    desc = st.text_input("Fee description", value="College fee")
-                    amount = st.number_input("Amount (PKR)", min_value=0.0, step=100.0)
-                    paid = st.number_input("Paid amount (PKR)", min_value=0.0, step=100.0)
-                    due = st.date_input("Due date", value=date.today())
-                    save = st.form_submit_button("Save fee record")
+                    desc = st.text_input("Description", value="College Fee")
+                    amount = st.number_input("Total Amount (PKR)", min_value=0.0)
+                    paid = st.number_input("Paid Amount (PKR)", min_value=0.0)
+                    due = st.date_input("Due Date", value=date.today())
+                    save = st.form_submit_button("Save Record", type="primary")
                 if save:
-                    if paid > amount: st.error("Paid amount cannot exceed total amount.")
-                    else:
-                        status = "Paid" if paid >= amount else ("Partial" if paid > 0 else "Unpaid")
-                        with SessionLocal() as db:
-                            db.add(FeeRecord(student_id=smap[student], description=desc, amount=amount, paid_amount=paid, due_date=due, status=status))
-                            audit(db, user["id"], "fee_record_created", f"{student}, amount={amount}, paid={paid}"); db.commit(); st.success("Fee record saved."); st.rerun()
+                    status = "Paid" if paid >= amount else ("Partial" if paid > 0 else "Unpaid")
+                    with SessionLocal() as db:
+                        db.add(FeeRecord(student_id=smap[student], description=desc, amount=amount, paid_amount=paid, due_date=due, status=status))
+                        audit(db, user["id"], "fee_record_created", f"{student}"); db.commit(); st.success("Fee record added."); st.rerun()
     with SessionLocal() as db:
         q = select(FeeRecord, Student.student_no, Student.full_name).join(Student, FeeRecord.student_id == Student.id).order_by(FeeRecord.created_at.desc())
-        if user["role"] == "student": q = q.where(Student.user_id == user["id"])
-        elif user["role"] == "parent": q = q.where(Student.parent_user_id == user["id"])
         rows = db.execute(q).all()
-        data = [{"Roll number": no, "Student": name, "Description": f.description, "Amount PKR": f.amount, "Paid PKR": f.paid_amount, "Balance PKR": f.amount-f.paid_amount, "Due date": f.due_date, "Status": f.status} for f,no,name in rows]
+        data = [{"Roll No": no, "Student": name, "Description": f.description, "Amount": f.amount, "Paid": f.paid_amount, "Balance": f.amount-f.paid_amount, "Status": f.status} for f,no,name in rows]
     if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
-    else: st.info("No fee records available for your account.")
-    st.caption("This module records fees; it does not connect to a bank or payment gateway.")
 
 def ai_assistant(user):
-    st.subheader("GPGC AI assistant")
-    st.write("Ask for general explanations, study planning or help understanding college procedures. Do not enter private student data, passwords or confidential records.")
+    st.subheader("GPGC AI Assistant")
+    st.caption("Ask academic or general procedural queries.")
     key = get_setting("GROQ_API_KEY")
     if not key:
-        st.warning("Groq API key is not configured yet. Add GROQ_API_KEY to Streamlit Cloud → App → Settings → Secrets, or to your local .streamlit/secrets.toml file.")
-        st.code('GROQ_API_KEY = "your_groq_api_key_here"\nGROQ_MODEL = "llama-3.3-70b-versatile"', language="toml")
-        st.markdown("Get a key from [Groq Console](https://console.groq.com/keys). Never commit your real key to GitHub.")
+        st.warning("Configure `GROQ_API_KEY` in Streamlit Secrets to activate AI assistance.")
         return
-    prompt = st.text_area("Your question", placeholder="Explain how attendance percentage is calculated.", height=110)
+    prompt = st.text_area("Your Question", placeholder="Ask any question regarding coursework or portal usage...", height=110)
     if st.button("Ask AI", type="primary"):
-        if not prompt.strip(): st.error("Enter a question first.")
+        if not prompt.strip(): st.error("Please enter a question.")
         else:
             try:
                 from groq import Groq
                 client = Groq(api_key=key)
                 model = get_setting("GROQ_MODEL", "llama-3.3-70b-versatile")
                 with st.spinner("Generating answer..."):
-                    result = client.chat.completions.create(model=model, messages=[{"role":"system","content":"You are a helpful educational assistant for Government Post Graduate College Miran Shah, North Waziristan. Answer clearly and safely. Do not claim to access college records or official policies unless provided in the prompt."},{"role":"user","content":prompt}], temperature=0.4, max_tokens=1000)
+                    result = client.chat.completions.create(model=model, messages=[{"role":"system","content":"You are a helpful educational assistant for Government Post Graduate College Miran Shah."},{"role":"user","content":prompt}], temperature=0.4, max_tokens=1000)
                 st.markdown(result.choices[0].message.content)
             except Exception as e:
-                st.error("The AI request failed. Check the Groq key, model availability, network and API quota.")
-                st.caption(str(e)[:300])
+                st.error(f"Error: {str(e)[:200]}")
 
 def dashboard(user):
     role = user["role"]
-    st.markdown(f'<div class="hero"><h1>🎓 {ROLE_LABELS.get(role, role)} Dashboard</h1><p>Government Post Graduate College Miran Shah · North Waziristan</p></div>', unsafe_allow_html=True)
+    
+    # Render College Logo + Hero Title
+    st.markdown(f'''
+    <div class="hero">
+        <div>
+            <h1>Government Post Graduate College Miran Shah</h1>
+            <p>North Waziristan · Academic Portal ({ROLE_LABELS.get(role, role)})</p>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
     with SessionLocal() as db:
         n_students = db.scalar(select(func.count()).select_from(Student)) or 0
         n_users = db.scalar(select(func.count()).select_from(User).where(User.active == True)) or 0
         n_courses = db.scalar(select(func.count()).select_from(Course)) or 0
         n_ann = db.scalar(select(func.count()).select_from(Announcement).where(Announcement.published == True)) or 0
-        n_books = db.scalar(select(func.count()).select_from(Book)) or 0
-        n_rooms = db.scalar(select(func.count()).select_from(HostelRoom)) or 0
-    if role in ("super_admin", "second_admin"):
-        metric_row([("Active accounts", n_users), ("Students", n_students), ("Courses", n_courses), ("Announcements", n_ann)])
-    elif role in ("teacher", "hod"):
-        metric_row([("Students", n_students), ("Courses", n_courses), ("Announcements", n_ann)])
-    elif role == "librarian": metric_row([("Catalogue titles", n_books), ("Active users", n_users), ("Announcements", n_ann)])
-    elif role == "hostel_warden": metric_row([("Hostel rooms", n_rooms), ("Students", n_students), ("Announcements", n_ann)])
-    else: metric_row([("College courses", n_courses), ("Announcements", n_ann)])
-    st.write(f"Welcome, **{user['full_name']}**. Your current role is **{ROLE_LABELS.get(role, role)}**.")
+
+    metric_row([("Active Accounts", n_users), ("Students", n_students), ("Courses", n_courses), ("Notices", n_ann)])
+    st.write("")
 
     allowed = {
-        "super_admin": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Hostel", "Announcements", "User management", "AI assistant (Groq)", "Audit log"],
-        "second_admin": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Hostel", "Announcements", "User management", "AI assistant (Groq)"],
-        "teacher": ["Overview", "Students", "Courses", "Attendance", "Announcements", "AI assistant (Groq)"],
-        "student": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Announcements", "AI assistant (Groq)"],
-        "parent": ["Overview", "Students", "Attendance", "Fees", "Announcements", "AI assistant (Groq)"],
-        "librarian": ["Overview", "Library", "Announcements", "AI assistant (Groq)"],
-        "employee": ["Overview", "Announcements", "AI assistant (Groq)"],
-        "hod": ["Overview", "Students", "Courses", "Attendance", "Announcements", "AI assistant (Groq)"],
-        "hostel_warden": ["Overview", "Hostel", "Announcements", "AI assistant (Groq)"]
+        "super_admin": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Hostel", "Announcements", "User Management", "AI Assistant", "Audit Log"],
+        "second_admin": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Hostel", "Announcements", "User Management", "AI Assistant"],
+        "teacher": ["Overview", "Students", "Courses", "Attendance", "Announcements", "AI Assistant"],
+        "student": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Announcements", "AI Assistant"],
+        "parent": ["Overview", "Students", "Attendance", "Fees", "Announcements", "AI Assistant"],
+        "librarian": ["Overview", "Library", "Announcements", "AI Assistant"],
+        "employee": ["Overview", "Announcements", "AI Assistant"],
+        "hod": ["Overview", "Students", "Courses", "Attendance", "Announcements", "AI Assistant"],
+        "hostel_warden": ["Overview", "Hostel", "Announcements", "AI Assistant"]
     }
     available = allowed.get(role, ["Overview", "Announcements"])
 
-    # Track currently selected module per user role
     state_key = f"active_module_{role}"
     if state_key not in st.session_state or st.session_state[state_key] not in available:
         st.session_state[state_key] = "Overview"
 
-    st.write("---")
-    # Top horizontal navigation menu with action buttons
+    # Modern Horizontal Action Navbar
     nav_cols = st.columns(len(available))
     for col, mod in zip(nav_cols, available):
         with col:
-            btn_type = "primary" if st.session_state[state_key] == mod else "secondary"
-            if st.button(mod, key=f"nav_btn_{role}_{mod}", type=btn_type, use_container_width=True):
+            is_active = (st.session_state[state_key] == mod)
+            btn_type = "primary" if is_active else "secondary"
+            label = f"• {mod}" if is_active else mod
+            if st.button(label, key=f"nav_{role}_{mod}", type=btn_type, use_container_width=True):
                 st.session_state[state_key] = mod
                 st.rerun()
 
     selected_module = st.session_state[state_key]
-    st.divider()
+    st.markdown("<hr style='margin-top:0.5rem; margin-bottom:1.5rem;'>", unsafe_allow_html=True)
 
     if selected_module == "Overview":
-        st.subheader("Overview")
-        st.write("Select a module above to manage records and access resources.")
+        render_header("Overview & Announcements", f"Welcome back, {user['full_name']}")
         show_announcements(user, manage=role in ("super_admin", "second_admin", "hod"))
     elif selected_module == "Students": students_module(user)
     elif selected_module == "Courses": courses_module(user)
@@ -606,51 +667,36 @@ def dashboard(user):
     elif selected_module == "Fees": fees_module(user)
     elif selected_module == "Library": library_module(user)
     elif selected_module == "Hostel": hostel_module(user)
-    elif selected_module == "Announcements":
-        if role in ("super_admin", "second_admin", "hod"):
-            st.subheader("Create announcement")
-            with st.form("announcement_form", clear_on_submit=True):
-                title = st.text_input("Announcement title")
-                body = st.text_area("Announcement details", height=120)
-                audience = st.selectbox("Audience", ["Everyone"] + ROLES, format_func=lambda r: "Everyone" if r == "Everyone" else ROLE_LABELS[r])
-                publish = st.form_submit_button("Publish announcement", type="primary")
-            if publish:
-                if not title.strip() or not body.strip(): st.error("Title and details are required.")
-                else: add_announcement(user, title, body, audience); st.success("Announcement published."); st.rerun()
-            st.caption("You can edit or delete an announcement by expanding it below.")
-            show_announcements(user, manage=True)
-        else:
-            show_announcements(user, manage=False)
-    elif selected_module == "User management": admin_users(user)
-    elif selected_module == "AI assistant (Groq)": ai_assistant(user)
-    elif selected_module == "Audit log":
-        if role != "super_admin": st.error("You are not authorized to view the system audit log.")
+    elif selected_module == "Announcements": show_announcements(user, manage=role in ("super_admin", "second_admin", "hod"))
+    elif selected_module == "User Management": admin_users(user)
+    elif selected_module == "AI Assistant": ai_assistant(user)
+    elif selected_module == "Audit Log":
+        if role != "super_admin": st.error("Unauthorized.")
         else:
             with SessionLocal() as db:
                 rows = db.execute(select(AuditLog.created_at, User.username, AuditLog.action, AuditLog.details).outerjoin(User, AuditLog.user_id == User.id).order_by(AuditLog.created_at.desc()).limit(250)).all()
                 data = [{"Time": t, "User": u or "system", "Action": a, "Details": d} for t,u,a,d in rows]
-            if data: st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
-            else: st.info("No audit events yet.")
+            st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
 def main():
     user = current_user()
     if not user:
         login_screen()
-        st.divider()
-        st.caption("GPGC-CMS starter release · Never use real student records until deployment security, backups and access rules have been reviewed.")
         return
     with st.sidebar:
-        st.markdown("### 🎓 GPGC-CMS")
-        st.write(user["full_name"])
-        st.caption(ROLE_LABELS.get(user["role"], user["role"]))
-        if user["department"]: st.caption(user["department"])
+        if os.path.exists("logo.png"):
+            st.image("logo.png", width=120)
+        st.markdown(f"### 🎓 {user['full_name']}")
+        st.caption(f"Role: **{ROLE_LABELS.get(user['role'], user['role'])}**")
+        if user["department"]: st.caption(f"Dept: {user['department']}")
         st.divider()
-        if st.button("Log out", use_container_width=True):
+        if st.button("Sign Out", use_container_width=True):
             with SessionLocal() as db:
                 audit(db, user["id"], "logout", "User logged out"); db.commit()
             st.session_state.clear(); st.rerun()
         st.markdown("---")
-        st.caption("GPGC Miran Shah · North Waziristan")
+        st.caption("Government Post Graduate College Miran Shah")
     dashboard(user)
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()
