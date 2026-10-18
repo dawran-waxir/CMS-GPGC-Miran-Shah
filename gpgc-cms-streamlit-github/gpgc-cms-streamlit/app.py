@@ -17,13 +17,11 @@ ROLE_LABELS = {
 }
 ph = PasswordHasher()
 
-# Direct Raw GitHub URL for the official GPGC crest
 GITHUB_LOGO_URL = "https://raw.githubusercontent.com/dawran-waxir/CMS-GPGC-Miran-Shah/main/gpgc-cms-streamlit-github/gpgc-cms-streamlit/logo.jpg"
 
 st.set_page_config(page_title=APP_NAME, page_icon="🎓", layout="wide", initial_sidebar_state="expanded")
 
 def get_logo_html(width="65px"):
-    # 1. Try local logo files if present in workspace
     for local_file in ["logo.jpg", "logo.png"]:
         if os.path.exists(local_file):
             try:
@@ -33,15 +31,12 @@ def get_logo_html(width="65px"):
                 return f'<img src="data:image/{ext};base64,{b64}" style="width:{width}; height:auto; border-radius:50%; border:2px solid #d4af37; box-shadow:0 4px 12px rgba(0,0,0,0.22); display:inline-block; vertical-align:middle;">'
             except Exception:
                 pass
-
-    # 2. Fetch directly from your GitHub repository raw URL
     return f'<img src="{GITHUB_LOGO_URL}" style="width:{width}; height:auto; border-radius:50%; border:2px solid #d4af37; box-shadow:0 4px 12px rgba(0,0,0,0.22); display:inline-block; vertical-align:middle;">'
 
-# Senior UI/UX Executive Styling
+# UI/UX Executive Styling with Enhanced Button Hover Dynamics
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* Main Canvas & Typography Override */
 html, body, [class*="css"], .stApp {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     background-color: #f8fafc !important;
@@ -54,7 +49,7 @@ html, body, [class*="css"], .stApp {
     max-width: 1380px;
 }
 
-/* Sidebar Theme Integration */
+/* Sidebar Styling */
 [data-testid="stSidebar"] {
     background-color: #ffffff !important;
     border-right: 1px solid #e2e8f0 !important;
@@ -115,10 +110,10 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     font-size: 2rem !important;
 }
 
-/* Segmented Control Navigation Styling */
+/* Segmented Control Pills Navigation with High-Contrast Hover State */
 div[data-testid="stPills"] {
     background: #ffffff !important;
-    padding: 0.5rem 0.75rem !important;
+    padding: 0.6rem 0.8rem !important;
     border-radius: 16px !important;
     border: 1px solid #cbd5e1 !important;
     box-shadow: 0 4px 14px rgba(0,0,0,0.03) !important;
@@ -127,26 +122,61 @@ div[data-testid="stPills"] button {
     border-radius: 12px !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
-    padding: 0.45rem 1.1rem !important;
-    color: #334155 !important;
-    border: 1px solid transparent !important;
-    transition: all 0.2s ease !important;
+    padding: 0.5rem 1.2rem !important;
+    color: #1e293b !important;
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
+
+/* Pill Hover State - Rich Crimson Tint with Gold Highlight */
+div[data-testid="stPills"] button:hover {
+    background-color: #fce8e9 !important;
+    color: #6b1519 !important;
+    border-color: #d4af37 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(107, 21, 25, 0.12) !important;
+}
+
+/* Selected Pill State */
 div[data-testid="stPills"] button[aria-selected="true"] {
     background: linear-gradient(135deg, #4a0e11, #6b1519) !important;
     color: #ffffff !important;
     border: 1px solid #d4af37 !important;
-    box-shadow: 0 4px 12px rgba(107, 21, 25, 0.25) !important;
+    box-shadow: 0 4px 14px rgba(107, 21, 25, 0.3) !important;
 }
 
-/* Form Actions and Inputs */
+/* Primary Button Styling & Hover State */
 button[kind="primary"] {
     background: linear-gradient(135deg, #4a0e11, #6b1519) !important;
     border: 1px solid #d4af37 !important;
     border-radius: 10px !important;
     font-weight: 700 !important;
     color: #ffffff !important;
+    transition: all 0.25s ease !important;
 }
+button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #6b1519, #8c1c22) !important;
+    box-shadow: 0 6px 16px rgba(107, 21, 25, 0.35) !important;
+    border-color: #f3e8c8 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Secondary Button Styling & Hover State */
+button[kind="secondary"] {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.25s ease !important;
+}
+button[kind="secondary"]:hover {
+    background-color: #fce8e9 !important;
+    color: #6b1519 !important;
+    border-color: #6b1519 !important;
+}
+
 .stTextInput input, .stSelectbox select, .stTextArea textarea {
     background-color: #ffffff !important;
     color: #0f172a !important;
@@ -154,7 +184,6 @@ button[kind="primary"] {
     border: 1px solid #cbd5e1 !important;
 }
 
-/* Header Container */
 .section-header {
     display: flex;
     align-items: center;
@@ -690,7 +719,6 @@ def dashboard(user):
     if state_key not in st.session_state or st.session_state[state_key] not in available:
         st.session_state[state_key] = "Overview"
 
-    # Segmented Control Pills Navigation
     selected_module = st.pills(
         label="Portal Navigation",
         options=available,
