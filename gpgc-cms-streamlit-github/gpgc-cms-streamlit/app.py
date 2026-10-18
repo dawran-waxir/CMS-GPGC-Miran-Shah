@@ -27,9 +27,11 @@ div[data-testid="stMetric"] {border:1px solid #dce3ea; padding:14px; border-radi
 header[data-testid="stHeader"] {background:transparent;}
 [data-testid="stSidebar"] {border-right:1px solid rgba(128,128,128,.25);}
 button[kind="secondary"] {border-radius:10px;}
+div[data-testid="stHorizontalBlock"] button {border-radius:10px; font-weight:600;}
 </style>""", unsafe_allow_html=True)
 
 class Base(DeclarativeBase): pass
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -134,7 +136,6 @@ def get_setting(key, default=None):
 @st.cache_resource
 def database_resources():
     url = get_setting("DATABASE_URL", "sqlite:///gpgc_cms.db")
-    # Most managed PostgreSQL providers provide postgres://; SQLAlchemy expects postgresql://.
     if url.startswith("postgres://"):
         url = "postgresql+psycopg://" + url[len("postgres://"):]
     elif url.startswith("postgresql://") and "+psycopg" not in url:
@@ -565,59 +566,39 @@ def dashboard(user):
     st.write(f"Welcome, **{user['full_name']}**. Your current role is **{ROLE_LABELS.get(role, role)}**.")
 
     allowed = {
-        "super_admin": ["Overview","Students","Courses","Attendance","Fees","Library","Hostel","Announcements","User management","AI assistant (Groq)","Audit log"],
-        "second_admin": ["Overview","Students","Courses","Attendance","Fees","Library","Hostel","Announcements","User management","AI assistant (Groq)"],
-        "teacher": ["Overview","Students","Courses","Attendance","Announcements","AI assistant (Groq)"],
-        "student": ["Overview","Students","Courses","Attendance","Fees","Library","Announcements","AI assistant (Groq)"],
-        "parent": ["Overview","Students","Attendance","Fees","Announcements","AI assistant (Groq)"],
-        "librarian": ["Overview","Library","Announcements","AI assistant (Groq)"],
-        "employee": ["Overview","Announcements","AI assistant (Groq)"],
-        "hod": ["Overview","Students","Courses","Attendance","Announcements","AI assistant (Groq)"],
-        "hostel_warden": ["Overview","Hostel","Announcements","AI assistant (Groq)"]
+        "super_admin": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Hostel", "Announcements", "User management", "AI assistant (Groq)", "Audit log"],
+        "second_admin": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Hostel", "Announcements", "User management", "AI assistant (Groq)"],
+        "teacher": ["Overview", "Students", "Courses", "Attendance", "Announcements", "AI assistant (Groq)"],
+        "student": ["Overview", "Students", "Courses", "Attendance", "Fees", "Library", "Announcements", "AI assistant (Groq)"],
+        "parent": ["Overview", "Students", "Attendance", "Fees", "Announcements", "AI assistant (Groq)"],
+        "librarian": ["Overview", "Library", "Announcements", "AI assistant (Groq)"],
+        "employee": ["Overview", "Announcements", "AI assistant (Groq)"],
+        "hod": ["Overview", "Students", "Courses", "Attendance", "Announcements", "AI assistant (Groq)"],
+        "hostel_warden": ["Overview", "Hostel", "Announcements", "AI assistant (Groq)"]
     }
     available = allowed.get(role, ["Overview", "Announcements"])
-    # Streamlit-native horizontal navigation. Each category exposes a dropdown of allowed modules.
-    groups = {
-        "Home": ["Overview"],
-        "Academics": [x for x in ["Students", "Courses", "Attendance"] if x in available],
-        "Administration": [x for x in ["Fees", "User management", "Audit log"] if x in available],
-        "Services": [x for x in ["Library", "Hostel"] if x in available],
-        "Communication": [x for x in ["Announcements"] if x in available],
-        "AI Tools": [x for x in ["AI assistant (Groq)"] if x in available]
-    }
-    groups = {k:v for k,v in groups.items() if v}
-    st.markdown("""<style>
-    div[data-testid="stHorizontalBlock"] div[data-testid="stSelectbox"] label {font-weight:650;}
-    div[data-testid="stHorizontalBlock"] div[data-testid="stSelectbox"] > div {border-radius:10px;}
-    .nav-hint {font-size:.84rem;color:#7b8794;margin:.1rem 0 .65rem 0}
-    </style>""", unsafe_allow_html=True)
-    st.markdown('<div class="nav-hint">Use the top navigation menus to open the modules available for your role.</div>', unsafe_allow_html=True)
-    nav_cols = st.columns(len(groups))
-    selected_module = "Overview"
-    for col, (group_name, modules) in zip(nav_cols, groups.items()):
+
+    # Track currently selected module per user role
+    state_key = f"active_module_{role}"
+    if state_key not in st.session_state or st.session_state[state_key] not in available:
+        st.session_state[state_key] = "Overview"
+
+    st.write("---")
+    # Top horizontal navigation menu with action buttons
+    nav_cols = st.columns(len(available))
+    for col, mod in zip(nav_cols, available):
         with col:
-            chosen = st.selectbox(group_name, modules, key=f"nav_{role}_{group_name}", label_visibility="visible")
-            if chosen != "Overview":
-                # Later menus take priority only if they contain the currently selected non-default module.
-                if st.session_state.get(f"active_module_{role}") == chosen or selected_module == "Overview":
-                    selected_module = chosen
-    # Preserve the last explicit selection; each dropdown is a real, keyboard-accessible control.
-    non_overview = [st.session_state.get(f"nav_{role}_{g}") for g in groups if g != "Home"]
-    chosen_modules = [x for x in non_overview if x and x != "Overview"]
-    if chosen_modules:
-        selected_module = st.session_state.get(f"active_module_{role}", chosen_modules[0])
-        if selected_module not in chosen_modules:
-            selected_module = chosen_modules[0]
-    else:
-        selected_module = "Overview"
-    # Explicit module selector below the top bar avoids ambiguity when multiple dropdowns have selections.
-    if len(available) > 1:
-        selected_module = st.selectbox("Open module", available, index=available.index(selected_module) if selected_module in available else 0, key=f"module_route_{role}")
+            btn_type = "primary" if st.session_state[state_key] == mod else "secondary"
+            if st.button(mod, key=f"nav_btn_{role}_{mod}", type=btn_type, use_container_width=True):
+                st.session_state[state_key] = mod
+                st.rerun()
+
+    selected_module = st.session_state[state_key]
     st.divider()
+
     if selected_module == "Overview":
         st.subheader("Overview")
-        st.write("Choose a module from the navigation above to manage the records available to your role.")
-        st.caption("Modules are being expanded in phases. Records must be restricted by account links and department where configured.")
+        st.write("Select a module above to manage records and access resources.")
         show_announcements(user, manage=role in ("super_admin", "second_admin", "hod"))
     elif selected_module == "Students": students_module(user)
     elif selected_module == "Courses": courses_module(user)
